@@ -24,56 +24,60 @@ pip install -r requirements.txt
 ├── requirements.txt        # Các thư viện phụ thuộc
 ├── src/
 │   ├── data/
-│   │   └── loader.py       # Data loader cho MTEB/BEIR
+│   │   └── loader.py       # Data loader cho MTEB (Hỗ trợ Quora-duplicates)
 │   ├── models/
-│   │   ├── ads.py          # Module Adaptive Dimension Selection
-│   │   ├── memory.py       # Module S-XBM Memory
+│   │   ├── ads.py          # Module Adaptive Dimension Selection (Gumbel-Softmax)
+│   │   ├── memory.py       # Module Selective Cross-Batch Memory (S-XBM)
 │   │   └── smec_wrapper.py # Wrapper kết hợp Backbone + ADS
-│   ├── loss.py             # Contrastive Loss + S-XBM support
-│   ├── trainer.py          # Vòng lặp huấn luyện SMRL tuần tự
-│   └── evaluate.py         # Script đánh giá dùng MTEB
-└── docs/                   # Tài liệu dự án
+│   ├── loss.py             # Contrastive Loss (InfoNCE) + S-XBM support
+│   ├── trainer.py          # Vòng lặp huấn luyện SMRL (Hỗ trợ FP16 Mixed Precision)
+│   └── evaluate.py         # Script đánh giá dùng MTEB (Kế thừa EncoderProtocol)
+└── docs/
+    ├── architecture.md     # Tài liệu chi tiết kiến trúc hệ thống
+    └── evaluation_report.md # Báo cáo kết quả và so sánh nén embedding
 ```
 
 ## Hướng dẫn Sử dụng
 
 ### 1. Huấn luyện (Training)
 
-Chạy lệnh sau để bắt đầu huấn luyện mô hình theo chiến lược SMRL:
+Chạy huấn luyện tuần tự qua các Dimension (768 -> 384 -> 192):
 
 ```bash
 python main.py --mode train --model_name bert-base-uncased --dataset_name quora --epochs 3 --batch_size 32 --max_length 128
-
 ```
 
-Các tham số tùy chọn:
-- `--model_name`: Tên backbone model (mặc định: `bert-base-uncased`).
-- `--output_dir`: Thư mục lưu checkpoint.
-- `--batch_size`: Kích thước batch.
-- `--lr`: Learning rate.
+**Các tham số chính:**
+- `--model_name`: Backbone model từ HuggingFace (mặc định: `bert-base-uncased`).
+- `--dataset_name`: Dataset cho huấn luyện (mặc định: `quora`).
+- `--epochs`: Số lượng epoch huấn luyện cho **mỗi** chiều không gian.
+- `--batch_size`: Kích thước batch (khuyên dùng 32 cho VRAM 8GB).
+- `--max_length`: Độ dài tối đa của sequence (mặc định: 128).
+- `--lr`: Learning rate (mặc định: 2e-5).
 
 ### 2. Đánh giá (Evaluation)
 
-Bạn có thể đánh giá một checkpoint cụ thể hoặc tự động đánh giá tất cả các checkpoint đã huấn luyện:
+Dự án hỗ trợ đánh giá tự động trên bộ tiêu chuẩn **MTEB (STSBenchmark)**:
 
-**Đánh giá tất cả checkpoint trong thư mục:**
+**Tự động đánh giá tất cả checkpoint trong thư mục:**
 ```bash
-python main.py --mode eval --model_name bert-base-uncased --output_dir ./checkpoints
-```
-*Lưu ý: Lệnh này sẽ tự động quét các file `checkpoint_dim_*` trong thư mục output và chạy đánh giá lần lượt.*
-
-**Đánh giá một checkpoint cụ thể:**
-```bash
-python main.py --mode eval --model_name bert-base-uncased --checkpoint ./checkpoints/checkpoint_dim_192
+python main.py --mode eval --output_dir ./checkpoints
 ```
 
-Mặc định, script sẽ đánh giá trên benchmark `STSBenchmark` để kiểm tra nhanh. Kết quả sẽ được lưu vào các thư mục `results_*` tương ứng.
+**Đánh giá một file checkpoint cụ thể:**
+```bash
+python main.py --mode eval --checkpoint ./checkpoints/checkpoint_dim_192
+```
 
-## Kết quả (Dự kiến)
+*Kết quả sẽ được lưu vào thư mục `results/` dưới dạng các file JSON chi tiết.*
 
-Mô hình SMEC được kỳ vọng sẽ đạt hiệu suất nén tốt hơn so với các phương pháp MRL truyền thống, đặc biệt ở các mức nén cao (ví dụ: 12x, 14x).
+## Hiệu năng & Tối ưu hóa
+
+- **GPU Acceleration**: Tự động sử dụng CUDA nếu khả dụng.
+- **Mixed Precision**: Sử dụng `torch.cuda.amp` để tối ưu hóa bộ nhớ và tốc độ trên các dòng card RTX.
+- **Auto-Dimension**: Lớp ADS tự động điều chỉnh Mask weights dựa trên checkpoint được load.
 
 ## Tham khảo
 
-- **SMEC: Rethinking Matryoshka Representation Learning for Retrieval Embedding Compression**
-- Dataset: MTEB/BEIR Benchmark
+- **SMEC Paper**: Rethinking Matryoshka Representation Learning for Retrieval Embedding Compression.
+- **Framework**: PyTorch & MTEB.
