@@ -43,7 +43,7 @@ graph TD
 ```
 
 ## 5. Các Thay đổi Chi tiết
-- **Khởi tạo kế hoạch**: Xây dựng lộ trình triển khai dựa trên workflow `02_project_overview.md`.
+- **Khởi tạo kế hoạch**: Xây dựng lộ trình triển khai.
 - **Sửa lỗi Mermaid**: Điều chỉnh cú pháp biểu đồ trong file Markdown do lỗi nhãn chứa ký tự đặc biệt.
 - **Triển khai khung mã nguồn**: Hoàn thiện toàn bộ cấu trúc thư mục `src/` và các file cấu hình cần thiết để dự án có thể vận hành được ngay.
 - **CLI Interface**: Tạo giao diện dòng lệnh linh hoạt cho phép chuyển đổi giữa chế độ `train` và `eval`.
@@ -56,8 +56,6 @@ graph TD
 - [ ] Cài đặt môi trường: `pip install -r requirements.txt`.
 - [ ] Chạy thử nghiệm huấn luyện với dataset nhỏ: `python main.py --mode train --epochs 1`.
 - [ ] Kiểm tra tính chính xác của ADS mask sau vài epoch.
-- **Bước kế tiếp**: Thực hiện đổi tên thư mục gốc thành `smec_16022026` và cài đặt dependencies.
-- *Trích dẫn:* "tôi muốn đổi thành smec_16022026"
 
 ## 8. Tóm tắt Bàn giao
 Dự án SMEC đã được thiết lập đầy đủ về mặt cấu trúc và mã nguồn cơ sở. Người dùng có thể bắt đầu quá trình huấn luyện sau khi đổi tên thư mục và cài đặt thư viện. Tất cả các thành phần kỹ thuật phức tạp (S-XBM, ADS) đã được triển khai dưới dạng functional skeleton sẵn sàng cho việc finetuning.

@@ -71,34 +71,32 @@ graph TD
 
 ## 3. Proposed Changes (Kế hoạch Triển khai)
 
-Dự án mới (New Project) theo workflow `02_project_overview.md`.
-
 ### Phase 1: Environment & Data Setup
 Thiết lập môi trường và pipeline dữ liệu.
-#### [NEW] [requirements.txt](file:///e:/Workspace/Draft/project/2026/draft_16022026/requirements.txt)
+#### [NEW] [requirements.txt]
 - `torch`, `transformers`, `datasets`, `sentence-transformers`, `wandb` (logging).
-#### [NEW] [src/data/loader.py](file:///e:/Workspace/Draft/project/2026/draft_16022026/src/data/loader.py)
+#### [NEW] [src/data/loader.py]
 - Hàm load dataset từ MTEB/BEIR, format dữ liệu cho Contrastive Learning (Query, Positive, Negative).
 
 ### Phase 2: Core Implementation (SMEC Architecture)
 Xây dựng các thành phần cốt lõi của SMEC.
-#### [NEW] [src/models/ads.py](file:///e:/Workspace/Draft/project/2026/draft_16022026/src/models/ads.py)
+#### [NEW] [src/models/ads.py]
 - Implement lớp `AdaptiveDimensionSelection` dùng Gumbel-Softmax.
-#### [NEW] [src/models/memory.py](file:///e:/Workspace/Draft/project/2026/draft_16022026/src/models/memory.py)
+#### [NEW] [src/models/memory.py]
 - Implement `SelectiveCrossBatchMemory` (queue, enqueue, retrieve top-k).
-#### [NEW] [src/models/smec_wrapper.py](file:///e:/Workspace/Draft/project/2026/draft_16022026/src/models/smec_wrapper.py)
+#### [NEW] [src/models/smec_wrapper.py]
 - Wrapper kết hợp Backbone + ADS.
 
 ### Phase 3: Training Logic (SMRL)
 Implement vòng lặp huấn luyện tuần tự.
-#### [NEW] [src/trainer.py](file:///e:/Workspace/Draft/project/2026/draft_16022026/src/trainer.py)
+#### [NEW] [src/trainer.py]
 - Custom loop: Train Dim 1 -> Freeze -> Train Dim 2 -> Freeze...
 - Tích hợp S-XBM vào loss calculation.
 
 ### Phase 4: Evaluation & Main Entry
-#### [NEW] [src/evaluate.py](file:///e:/Workspace/Draft/project/2026/draft_16022026/src/evaluate.py)
+#### [NEW] [src/evaluate.py]
 - Script chạy đánh giá trên bộ test MTEB.
-#### [NEW] [main.py](file:///e:/Workspace/Draft/project/2026/draft_16022026/main.py)
+#### [NEW] [main.py]
 - Entry point để chạy training/eval từ dòng lệnh.
 
 ---
