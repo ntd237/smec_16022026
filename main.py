@@ -28,7 +28,6 @@ def main():
     parser.add_argument("--epochs", type=int, default=3, help="Epochs per dimension")
     parser.add_argument("--lr", type=float, default=2e-5, help="Learning rate")
     parser.add_argument("--max_length", type=int, default=128, help="Max sequence length")
-    parser.add_argument("--checkpoint", type=str, default=None, help="Path to specific checkpoint to load")
     
     args = parser.parse_args()
     
