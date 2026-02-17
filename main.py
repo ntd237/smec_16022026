@@ -27,6 +27,7 @@ def main():
     # Training
     parser.add_argument("--epochs", type=int, default=3, help="Epochs per dimension")
     parser.add_argument("--lr", type=float, default=2e-5, help="Learning rate")
+    parser.add_argument("--max_length", type=int, default=128, help="Max sequence length")
     
     args = parser.parse_args()
     
@@ -38,14 +39,20 @@ def main():
         logger.info("Starting Training Mode")
         
         # DataLoader
-        train_loader = get_dataloader(args.dataset_name, batch_size=args.batch_size, split="train")
+        train_loader = get_dataloader(
+            args.dataset_name, 
+            batch_size=args.batch_size, 
+            split="train",
+            max_length=args.max_length
+        )
         
         # Trainer
         trainer = SMECTrainer(
             model=model,
             train_loader=train_loader,
             output_dir=args.output_dir,
-            learning_rate=args.lr
+            learning_rate=args.lr,
+            max_length=args.max_length
         )
         
         # Sequential Training

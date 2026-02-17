@@ -42,7 +42,8 @@ pip install -r requirements.txt
 Chạy lệnh sau để bắt đầu huấn luyện mô hình theo chiến lược SMRL:
 
 ```bash
-python main.py --mode train --model_name bert-base-uncased --dataset_name quora --epochs 3
+python main.py --mode train --model_name bert-base-uncased --dataset_name quora --epochs 3 --batch_size 32 --max_length 128
+
 ```
 
 Các tham số tùy chọn:
