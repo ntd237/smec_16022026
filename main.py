@@ -27,6 +27,8 @@ def main():
     # Training
     parser.add_argument("--epochs", type=int, default=3, help="Epochs per dimension")
     parser.add_argument("--lr", type=float, default=2e-5, help="Learning rate")
+    parser.add_argument("--max_length", type=int, default=128, help="Max sequence length")
+    parser.add_argument("--checkpoint", type=str, default=None, help="Path to specific checkpoint to load")
     
     args = parser.parse_args()
     
@@ -38,14 +40,20 @@ def main():
         logger.info("Starting Training Mode")
         
         # DataLoader
-        train_loader = get_dataloader(args.dataset_name, batch_size=args.batch_size, split="train")
+        train_loader = get_dataloader(
+            args.dataset_name, 
+            batch_size=args.batch_size, 
+            split="train",
+            max_length=args.max_length
+        )
         
         # Trainer
         trainer = SMECTrainer(
             model=model,
             train_loader=train_loader,
             output_dir=args.output_dir,
-            learning_rate=args.lr
+            learning_rate=args.lr,
+            max_length=args.max_length
         )
         
         # Sequential Training
@@ -58,16 +66,46 @@ def main():
         
     elif args.mode == "eval":
         logger.info("Starting Evaluation Mode")
-        # Ensure model weights are loaded if evaluating a trained model
-        # For now, just evaluates the initialized model (or load from checkpoint if implemented)
-        checkpoint_path = os.path.join(args.output_dir, "checkpoint.pt") # Example
-        if os.path.exists(checkpoint_path):
-             model.load_state_dict(torch.load(checkpoint_path))
         
-        # Run Evaluation on standard tasks
-        # MTEB defaults
-        tasks = ["QuoraRetrieval", "STSBenchmark"] 
-        run_evaluation(model, tasks=tasks)
+        checkpoints_to_run = []
+        
+        if args.checkpoint:
+            checkpoints_to_run.append(args.checkpoint)
+        else:
+            # Look for all checkpoints in output_dir
+            if os.path.exists(args.output_dir):
+                all_files = os.listdir(args.output_dir)
+                dim_checkpoints = [os.path.join(args.output_dir, f) for f in all_files if "checkpoint_dim_" in f]
+                # Sort them descending (768, 384, 192)
+                dim_checkpoints.sort(key=lambda x: int(x.split("checkpoint_dim_")[-1]) if x.split("checkpoint_dim_")[-1].isdigit() else 0, reverse=True)
+                checkpoints_to_run.extend(dim_checkpoints)
+        
+        if not checkpoints_to_run:
+            logger.warning("No checkpoints found. Evaluating base model only.")
+            run_evaluation(model, tasks=["STSBenchmark"], output_folder=os.path.join("results", "results_base"))
+        else:
+            for cp_path in checkpoints_to_run:
+                logger.info(f"\n{'='*20}\nEvaluating Checkpoint: {cp_path}\n{'='*20}")
+                
+                # Reset/Set target dimension
+                if "checkpoint_dim_" in cp_path:
+                    try:
+                        dim_str = cp_path.split("checkpoint_dim_")[-1]
+                        target_dim = int(dim_str)
+                        logger.info(f"Setting target dimension: {target_dim}")
+                        model.set_ads_target_dim(target_dim)
+                    except ValueError:
+                        pass
+                
+                # Load weights
+                try:
+                    model.load_state_dict(torch.load(cp_path, map_location="cpu"))
+                    # Run Evaluation
+                    eval_subfolder = f"results_{os.path.basename(cp_path)}"
+                    eval_path = os.path.join("results", eval_subfolder)
+                    run_evaluation(model, tasks=["STSBenchmark"], output_folder=eval_path)
+                except Exception as e:
+                    logger.error(f"Failed to evaluate {cp_path}: {e}")
 
 if __name__ == "__main__":
     main()

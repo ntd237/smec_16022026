@@ -60,19 +60,14 @@ class AdaptiveDimensionSelection(nn.Module):
         # Fallback to simple learnable weights + Top-K masking for now as per "Adaptive" description.
         # But to make it differentiable, we apply the weights.
         
+        # Ensure mask_weights is on the same device as x
+        # This is redundant if gate_logits is properly registered as a parameter, 
+        # but provides a safety net if something goes wrong with model movement.
+        device = x.device
+        if self.gate_logits.device != device:
+             self.gate_logits.data = self.gate_logits.data.to(device)
+             
         mask_weights = torch.sigmoid(self.gate_logits)
-        
-        if self.training:
-            # Add noise for exploration if needed, or just use weights
-            pass
-            
-        # Standard Matryoshka takes x[:, :output_dim].
-        # ADS likely transforms x s.t. important features move to indices 0..output_dim?
-        # OR it just selects specific indices.
-        
-        # Let's implement a weighted projection for now which is safer.
-        # x_weighted = x * mask_weights
-        # specific implementation details might vary without exact code from paper.
         
         return x * mask_weights.unsqueeze(0)
 

@@ -27,11 +27,29 @@ class SMECDataset(Dataset):
         # For simplicity, we assume standard MTEB/BEIR format or 'sentence-transformers' format
         # This is a placeholder for actual data loading logic which can be complex depending on the dataset
         try:
-            self.data = load_dataset(dataset_name, split=split)
+            if dataset_name == 'quora':
+                 # Use the official HF 'quora' dataset with trust_remote_code=True because it requires execution of a python script
+                 # However, since scripts are deprecated/blocked often, we switch to a safer processed version if possible.
+                 # Let's try 'sentence-transformers/quora-duplicates', but that might need authentication or different structure.
+                 # Let's stick with 'quora' but enable trust_remote_code=True as a first attempt.
+                 # Actually, the error `Dataset scripts are no longer supported` suggests strict blocking.
+                  # We'll switch to 'sentence-transformers/quora-duplicates' which is a standard alternative.
+                  # MUST specify config name 'pair' as per error message
+                  self.data = load_dataset("sentence-transformers/quora-duplicates", "pair", split=split)
+                  # This dataset has 'questions' (list of text) and 'is_duplicate' (bool)
+                  # self.data = self.data.filter(lambda x: x['is_duplicate'])
+                  pass
+            else:
+                self.data = load_dataset(dataset_name, split=split)
+            
+            if len(self.data) == 0:
+                 raise ValueError("Dataset is empty after loading/filtering.")
+                 
             logger.info(f"Loaded {len(self.data)} samples from {dataset_name}/{split}")
         except Exception as e:
             logger.error(f"Failed to load dataset {dataset_name}: {e}")
-            self.data = []
+            # Fallback for debugging - create dummy data? No, better to fail hard.
+            raise e
 
     def __len__(self):
         return len(self.data)
@@ -41,12 +59,17 @@ class SMECDataset(Dataset):
         # Returns: {'query': str, 'positive': str, 'negative': List[str]}
         item = self.data[idx]
         
-        # Basic parsing logic - needs adjustment based on specific dataset structure (e.g., Quora, MSMARCO)
-        query = item.get('query', '') or item.get('sentence1', '')
-        positive = item.get('positive', '') or item.get('sentence2', '') # Assuming pairs for now
-        
-        # Handle negatives if available, else empty list
-        negatives = item.get('negatives', [])
+        if self.dataset_name == 'quora':
+             # structure from 'sentence-transformers/quora-duplicates' ('pair' config):
+             # {'anchor': str, 'positive': str}
+             query = item['anchor']
+             positive = item['positive']
+             negatives = []
+        else:
+             # Basic parsing logic - needs adjustment based on specific dataset structure (e.g., Quora, MSMARCO)
+             query = item.get('query', '') or item.get('sentence1', '')
+             positive = item.get('positive', '') or item.get('sentence2', '') # Assuming pairs for now
+             negatives = item.get('negatives', [])
         
         return {
             'query': query,
@@ -70,14 +93,16 @@ def collate_fn(batch):
 
 def get_dataloader(
     dataset_name: str,
+    split: str = "train",
     batch_size: int = 32,
     shuffle: bool = True,
-    num_workers: int = 4
+    num_workers: int = 4,
+    max_length: int = 128
 ) -> DataLoader:
     """
     Factory function to create DataLoader for SMEC training.
     """
-    dataset = SMECDataset(dataset_name)
+    dataset = SMECDataset(dataset_name, split=split, max_length=max_length)
     return DataLoader(
         dataset,
         batch_size=batch_size,

@@ -42,7 +42,8 @@ pip install -r requirements.txt
 Chạy lệnh sau để bắt đầu huấn luyện mô hình theo chiến lược SMRL:
 
 ```bash
-python main.py --mode train --model_name bert-base-uncased --dataset_name quora --epochs 3
+python main.py --mode train --model_name bert-base-uncased --dataset_name quora --epochs 3 --batch_size 32 --max_length 128
+
 ```
 
 Các tham số tùy chọn:
@@ -53,11 +54,20 @@ Các tham số tùy chọn:
 
 ### 2. Đánh giá (Evaluation)
 
-Chạy lệnh sau để đánh giá mô hình trên các tác vụ MTEB (ví dụ: QuoraRetrieval):
+Bạn có thể đánh giá một checkpoint cụ thể hoặc tự động đánh giá tất cả các checkpoint đã huấn luyện:
 
+**Đánh giá tất cả checkpoint trong thư mục:**
 ```bash
 python main.py --mode eval --model_name bert-base-uncased --output_dir ./checkpoints
 ```
+*Lưu ý: Lệnh này sẽ tự động quét các file `checkpoint_dim_*` trong thư mục output và chạy đánh giá lần lượt.*
+
+**Đánh giá một checkpoint cụ thể:**
+```bash
+python main.py --mode eval --model_name bert-base-uncased --checkpoint ./checkpoints/checkpoint_dim_192
+```
+
+Mặc định, script sẽ đánh giá trên benchmark `STSBenchmark` để kiểm tra nhanh. Kết quả sẽ được lưu vào các thư mục `results_*` tương ứng.
 
 ## Kết quả (Dự kiến)
 

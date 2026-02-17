@@ -21,15 +21,21 @@ class SMECTrainer:
         val_loader: DataLoader = None,
         learning_rate: float = 2e-5,
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
-        output_dir: str = "./checkpoints"
+        output_dir: str = "./checkpoints",
+        max_length: int = 128
     ):
         self.model = model.to(device)
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.device = device
         self.output_dir = output_dir
+        self.max_length = max_length
+        self.learning_rate = learning_rate
         self.optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
         self.criterion = SMECContrastiveLoss()
+        
+        # Mixed Precision support
+        self.scaler = torch.cuda.amp.GradScaler(enabled=(device == "cuda"))
         
         # Memory Queue (S-XBM)
         # Initialize with max size, e.g., 65536 or related to batch size
@@ -60,18 +66,20 @@ class SMECTrainer:
             queries = self._tokenize(batch['queries'])
             positives = self._tokenize(batch['positives'])
             
-            # Forward
-            # Note: ADS is active if target_dim < full_dim
-            q_emb = self.model(queries['input_ids'].to(self.device), queries['attention_mask'].to(self.device))
-            p_emb = self.model(positives['input_ids'].to(self.device), positives['attention_mask'].to(self.device))
+            # Forward with Mixed Precision
+            with torch.cuda.amp.autocast(enabled=(self.device == "cuda")):
+                # Forward
+                q_emb = self.model(queries['input_ids'].to(self.device), queries['attention_mask'].to(self.device))
+                p_emb = self.model(positives['input_ids'].to(self.device), positives['attention_mask'].to(self.device))
+                
+                # Loss
+                loss = self.criterion(q_emb, p_emb, memory_queue=self.memory)
             
-            # Loss
-            loss = self.criterion(q_emb, p_emb, memory_queue=self.memory)
-            
-            # Backward
+            # Backward with Scaler
             self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
+            self.scaler.scale(loss).backward()
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
             
             total_loss += loss.item()
             pbar.set_postfix({'loss': loss.item()})
@@ -111,6 +119,17 @@ class SMECTrainer:
                  # Subsequent steps: Freeze backbone, train ADS
                  self.model.freeze_backbone()
             
+            # 2.1 Ensure new ADS layer is on correct device
+            self.model.to(self.device)
+            
+            # 2.2 Re-initialize optimizer with current trainable parameters (MANDATORY for Sequential Training)
+            trainable_params = [p for p in self.model.parameters() if p.requires_grad]
+            if not trainable_params:
+                logger.warning(f"No trainable parameters found for dimension {dim}. Skipping optimizer initialization.")
+            else:
+                self.optimizer = optim.AdamW(trainable_params, lr=self.learning_rate)
+                # Note: GradScaler handles the new optimizer automatically in the next step()
+            
             # 3. Train loop
             for epoch in range(epochs_per_dim):
                 self.train_one_epoch(epoch, dim)
@@ -137,5 +156,5 @@ class SMECTrainer:
             padding=True, 
             truncation=True, 
             return_tensors="pt", 
-            max_length=512
+            max_length=self.max_length
         )
