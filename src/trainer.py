@@ -30,6 +30,7 @@ class SMECTrainer:
         self.device = device
         self.output_dir = output_dir
         self.max_length = max_length
+        self.learning_rate = learning_rate
         self.optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
         self.criterion = SMECContrastiveLoss()
         
@@ -117,6 +118,17 @@ class SMECTrainer:
             else:
                  # Subsequent steps: Freeze backbone, train ADS
                  self.model.freeze_backbone()
+            
+            # 2.1 Ensure new ADS layer is on correct device
+            self.model.to(self.device)
+            
+            # 2.2 Re-initialize optimizer with current trainable parameters (MANDATORY for Sequential Training)
+            trainable_params = [p for p in self.model.parameters() if p.requires_grad]
+            if not trainable_params:
+                logger.warning(f"No trainable parameters found for dimension {dim}. Skipping optimizer initialization.")
+            else:
+                self.optimizer = optim.AdamW(trainable_params, lr=self.learning_rate)
+                # Note: GradScaler handles the new optimizer automatically in the next step()
             
             # 3. Train loop
             for epoch in range(epochs_per_dim):
