@@ -38,14 +38,11 @@ class SMECTrainer:
         self.scaler = torch.cuda.amp.GradScaler(enabled=(device == "cuda"))
         
         # Memory Queue (S-XBM)
-        # Initialize with max size, e.g., 65536 or related to batch size
+        # Initialize with the model's currently active dimension.
+        # This queue is reset whenever target dimension changes during sequential training.
         self.memory = SelectiveCrossBatchMemory(
-            memory_size=1024, # Small for demo/testing
-            embedding_dim=model.embedding_dim, # Stores FULL dimension or formatted?
-            # Actually S-XBM likely stores the dimension currently being trained?
-            # Or the frozen backbone output?
-            # Paper: "S-XBM stores embeddings from the frozen backbone."
-            # So embedding_dim should correspond to backbone output.
+            memory_size=1024,  # Small for demo/testing
+            embedding_dim=getattr(self.model, "current_dim", self.model.embedding_dim),
             device=device
         )
         
@@ -99,6 +96,14 @@ class SMECTrainer:
             
             # 1. Set model target dimension (activates ADS for this dim)
             self.model.set_ads_target_dim(dim)
+
+            # 1.1 Reset memory queue to match active embedding dimension
+            # (required because queue tensor shape depends on embedding_dim)
+            self.memory = SelectiveCrossBatchMemory(
+                memory_size=1024,
+                embedding_dim=dim,
+                device=self.device
+            )
             
             # 2. Freeze/Unfreeze Logic
             # SMRL: "Parameters optimized in previous steps are frozen."
@@ -112,12 +117,12 @@ class SMECTrainer:
             # Or Sequence: Train Backbone (Full) -> Freeze Backbone -> Train ADS (D/2) -> Freeze ADS(D/2) -> ...
             
             if i == 0:
-                 # First step: Train backbone? Or assumes backbone is pretrained?
-                 # Usually MRL starts with finetuning backbone.
-                 self.model.unfreeze_backbone()
+                # First step: Train backbone? Or assumes backbone is pretrained?
+                # Usually MRL starts with finetuning backbone.
+                self.model.unfreeze_backbone()
             else:
-                 # Subsequent steps: Freeze backbone, train ADS
-                 self.model.freeze_backbone()
+                # Subsequent steps: Freeze backbone, train ADS
+                self.model.freeze_backbone()
             
             # 2.1 Ensure new ADS layer is on correct device
             self.model.to(self.device)

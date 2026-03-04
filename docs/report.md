@@ -97,7 +97,7 @@ S-XBM tăng cường học tương phản (contrastive learning) giữa embeddin
 
 SMEC được đánh giá trên nhiều bộ dữ liệu:
 
-- Văn bản: **:contentReference[oaicite:4]{index=4}**
+- Văn bản: BEIR
 - Hình ảnh: Products-10K
 - Đa phương thức: Fashion-200K
 

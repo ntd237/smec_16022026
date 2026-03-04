@@ -21,7 +21,7 @@ class AdaptiveDimensionSelection(nn.Module):
            g = -log(-log(u))
         where u ~ Uniform(0,1)
         """
-        U = torch.rand(shape).to(self.gate_logits.device)
+        U = torch.rand(shape, device=self.gate_logits.device)
         return -torch.log(-torch.log(U + eps) + eps)
 
     def forward(self, x: torch.Tensor, hard: bool = False) -> torch.Tensor:
@@ -34,7 +34,7 @@ class AdaptiveDimensionSelection(nn.Module):
         """
         device = x.device
         if self.gate_logits.device != device:
-             self.gate_logits.data = self.gate_logits.data.to(device)
+            self.gate_logits.data = self.gate_logits.data.to(device)
         # Sample Gumbel noise
         gumbel_noise = self.sample_gumbel(self.gate_logits.shape)
         # Add noise and scale by temperature
