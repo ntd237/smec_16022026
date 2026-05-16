@@ -19,7 +19,7 @@ Kết quả thực nghiệm cho thấy SMEC đạt **tỷ lệ nén không tổn
 
 ## Bối cảnh và Thách thức hiện tại
 
-Các mô hình ngôn ngữ lớn như **:contentReference[oaicite:0]{index=0}** hay **:contentReference[oaicite:1]{index=1}** thường sinh ra các vector nhúng có độ phân giải rất cao (từ 1.024 đến 4.096 chiều), cho phép mã hóa cấu trúc ngữ nghĩa tinh vi. Tuy nhiên, trong triển khai thực tế, các embedding này tạo ra nhiều rào cản nghiêm trọng.
+Các mô hình ngôn ngữ lớn như **OpenAI’s text-embedding-3-large** hay **LLM2Vec** thường sinh ra các vector nhúng có số chiều rất cao (từ 1.024 đến 4.096 chiều), cho phép mã hóa cấu trúc ngữ nghĩa tinh vi. Tuy nhiên, trong triển khai thực tế, các embedding này tạo ra nhiều rào cản nghiêm trọng.
 
 ### Các thách thức chính
 
@@ -27,7 +27,7 @@ Các mô hình ngôn ngữ lớn như **:contentReference[oaicite:0]{index=0}** 
   Chi phí bộ nhớ tăng tuyến tính theo số lượng tài liệu và số chiều embedding, đặc biệt trong các hệ thống truy vấn động hoặc xử lý văn bản dài.
 
 - **Lời nguyền đa chiều (Curse of Dimensionality)**  
-  Hiệu suất của các thuật toán tìm kiếm hàng xóm gần nhất như **:contentReference[oaicite:2]{index=2}** hoặc **:contentReference[oaicite:3]{index=3}** suy giảm đáng kể khi số chiều tăng, dẫn đến độ trễ truy vấn tăng nhanh.
+  Hiệu suất của các thuật toán tìm kiếm hàng xóm gần nhất suy giảm đáng kể khi số chiều tăng, dẫn đến độ trễ truy vấn tăng nhanh.
 
 - **Hạn chế của MRL truyền thống**
   - **Biến động gradient**: Tối ưu hóa đồng thời nhiều không gian chiều gây mất cân bằng cường độ gradient.
@@ -46,9 +46,7 @@ SMEC khắc phục các hạn chế trên thông qua ba đổi mới kỹ thuậ
 
 Khác với MRL tối ưu **song song nhiều kích thước**, SMRL áp dụng **chiến lược nén tuần tự**:
 
-\[
-D \rightarrow \frac{D}{2} \rightarrow \frac{D}{4} \rightarrow \dots
-\]
+`D → D/2 → D/4`
 
 ### Đặc điểm chính
 
@@ -99,7 +97,7 @@ S-XBM tăng cường học tương phản (contrastive learning) giữa embeddin
 
 SMEC được đánh giá trên nhiều bộ dữ liệu:
 
-- Văn bản: **:contentReference[oaicite:4]{index=4}**
+- Văn bản: BEIR
 - Hình ảnh: Products-10K
 - Đa phương thức: Fashion-200K
 

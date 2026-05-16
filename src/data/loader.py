@@ -28,22 +28,22 @@ class SMECDataset(Dataset):
         # This is a placeholder for actual data loading logic which can be complex depending on the dataset
         try:
             if dataset_name == 'quora':
-                 # Use the official HF 'quora' dataset with trust_remote_code=True because it requires execution of a python script
-                 # However, since scripts are deprecated/blocked often, we switch to a safer processed version if possible.
-                 # Let's try 'sentence-transformers/quora-duplicates', but that might need authentication or different structure.
-                 # Let's stick with 'quora' but enable trust_remote_code=True as a first attempt.
-                 # Actually, the error `Dataset scripts are no longer supported` suggests strict blocking.
-                  # We'll switch to 'sentence-transformers/quora-duplicates' which is a standard alternative.
-                  # MUST specify config name 'pair' as per error message
-                  self.data = load_dataset("sentence-transformers/quora-duplicates", "pair", split=split)
-                  # This dataset has 'questions' (list of text) and 'is_duplicate' (bool)
-                  # self.data = self.data.filter(lambda x: x['is_duplicate'])
-                  pass
+                # Use the official HF 'quora' dataset with trust_remote_code=True because it requires execution of a python script
+                # However, since scripts are deprecated/blocked often, we switch to a safer processed version if possible.
+                # Let's try 'sentence-transformers/quora-duplicates', but that might need authentication or different structure.
+                # Let's stick with 'quora' but enable trust_remote_code=True as a first attempt.
+                # Actually, the error `Dataset scripts are no longer supported` suggests strict blocking.
+                # We'll switch to 'sentence-transformers/quora-duplicates' which is a standard alternative.
+                # MUST specify config name 'pair' as per error message
+                self.data = load_dataset("sentence-transformers/quora-duplicates", "pair", split=split)
+                # This dataset has 'questions' (list of text) and 'is_duplicate' (bool)
+                # self.data = self.data.filter(lambda x: x['is_duplicate'])
+                pass
             else:
                 self.data = load_dataset(dataset_name, split=split)
             
             if len(self.data) == 0:
-                 raise ValueError("Dataset is empty after loading/filtering.")
+                raise ValueError("Dataset is empty after loading/filtering.")
                  
             logger.info(f"Loaded {len(self.data)} samples from {dataset_name}/{split}")
         except Exception as e:
@@ -60,16 +60,16 @@ class SMECDataset(Dataset):
         item = self.data[idx]
         
         if self.dataset_name == 'quora':
-             # structure from 'sentence-transformers/quora-duplicates' ('pair' config):
-             # {'anchor': str, 'positive': str}
-             query = item['anchor']
-             positive = item['positive']
-             negatives = []
+            # structure from 'sentence-transformers/quora-duplicates' ('pair' config):
+            # {'anchor': str, 'positive': str}
+            query = item['anchor']
+            positive = item['positive']
+            negatives = []
         else:
-             # Basic parsing logic - needs adjustment based on specific dataset structure (e.g., Quora, MSMARCO)
-             query = item.get('query', '') or item.get('sentence1', '')
-             positive = item.get('positive', '') or item.get('sentence2', '') # Assuming pairs for now
-             negatives = item.get('negatives', [])
+            # Basic parsing logic - needs adjustment based on specific dataset structure (e.g., Quora, MSMARCO)
+            query = item.get('query', '') or item.get('sentence1', '')
+            positive = item.get('positive', '') or item.get('sentence2', '') # Assuming pairs for now
+            negatives = item.get('negatives', [])
         
         return {
             'query': query,

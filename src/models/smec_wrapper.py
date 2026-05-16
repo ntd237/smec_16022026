@@ -42,9 +42,9 @@ class SMECModel(nn.Module):
         embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
         
         if self.ads is not None:
-             compressed_embeddings = self.ads(embeddings)
-             return compressed_embeddings
-             
+            compressed_embeddings = self.ads(embeddings)
+            return compressed_embeddings
+            
         return embeddings
 
     def freeze_backbone(self):

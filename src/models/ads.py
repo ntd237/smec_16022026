@@ -13,17 +13,16 @@ class AdaptiveDimensionSelection(nn.Module):
         self.output_dim = output_dim
         self.temperature = temperature
         
-        # Learnable parameters for dimension selection
-        # Shape: (input_dim, 2) -> representing probability of selecting (1) or not selecting (0)
-        # However, for dimensionality reduction D -> d, we need to select exactly 'output_dim' features 
-        # OR we learn a weight for each dimension.
-        # Paper approach: "ADS replaces static pruning with dynamic, learnable dimension selection."
-        # Implementation: Learn a mask 'm' via Gumbel-Softmax.
-        
-        # We use a Linear layer to project or select? 
-        # If strictly selection, we learn a mask.
-        # Let's implement a learnable gate. 
-        self.gate_logits = nn.Parameter(torch.randn(input_dim))
+        self.gate_logits = nn.Parameter(torch.randn(output_dim, input_dim))
+
+    def sample_gumbel(self, shape, eps=1e-20):
+        """
+        Sample Gumbel(0,1) noise:
+           g = -log(-log(u))
+        where u ~ Uniform(0,1)
+        """
+        U = torch.rand(shape, device=self.gate_logits.device)
+        return -torch.log(-torch.log(U + eps) + eps)
 
     def forward(self, x: torch.Tensor, hard: bool = False) -> torch.Tensor:
         """
@@ -31,45 +30,18 @@ class AdaptiveDimensionSelection(nn.Module):
             x: Input embeddings (Batch, Input_Dim)
             hard: Whether to return hard one-hot vectors (discrete selection)
         Returns:
-            Compressed embeddings (Batch, Output_Dim) - This might be tricky if simple masking.
-            If we just mask, dimension stays same but zeros out.
-            If we need reduced dimension, we might need a Top-K selection or a projection.
-            
-            Refining based on SMEC paper logic:
-            Usage of Gumbel-Softmax suggests differentiable selection.
-            If the goal is D -> D/2, likely we select top-k indices based on learned gates.
+            Compressed embeddings (Batch, Output_Dim) 
         """
-        # Gumbel-Softmax to get soft mask
-        # We need to sample 'k' dimensions? Or just weight them?
-        # Standard Gumbel-Softmax is for categorical distribution.
-        
-        # Simpler approach for "selection":
-        # 1. Learn importance scores for all D dimensions.
-        # 2. Select top-k indices for the target output_dim.
-        # 3. During training, we might mask others or re-order?
-        
-        # Let's assume a Masking approach first, where we weigh features.
-        # But for storage compression, we need actual size reduction.
-        # Most Matryoshka models just take the first k dimensions.
-        # SMEC ADS likely re-orders or selects specific indices to be the "first k".
-        
-        # Logic:
-        # We want to select 'output_dim' features from 'input_dim'.
-        # We can learn a permutation or a selection matrix.
-        
-        # Fallback to simple learnable weights + Top-K masking for now as per "Adaptive" description.
-        # But to make it differentiable, we apply the weights.
-        
-        # Ensure mask_weights is on the same device as x
-        # This is redundant if gate_logits is properly registered as a parameter, 
-        # but provides a safety net if something goes wrong with model movement.
         device = x.device
         if self.gate_logits.device != device:
-             self.gate_logits.data = self.gate_logits.data.to(device)
-             
-        mask_weights = torch.sigmoid(self.gate_logits)
+            self.gate_logits.data = self.gate_logits.data.to(device)
+        # Sample Gumbel noise
+        gumbel_noise = self.sample_gumbel(self.gate_logits.shape)
+        # Add noise and scale by temperature
+        logits_with_noise = (self.gate_logits + gumbel_noise) / self.temperature
+        selection_matrix = F.softmax(logits_with_noise, dim=-1)  # (Output_Dim, Input_Dim)
         
-        return x * mask_weights.unsqueeze(0)
+        return x @ selection_matrix.T  # (Batch, Output_Dim)
 
 class TopKSelector(nn.Module):
     """
