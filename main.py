@@ -3,7 +3,7 @@ import logging
 import os
 import torch
 from src.models.smec_wrapper import SMECModel
-from src.trainer import SMECTrainer
+from src.trainer import SMECTrainer 
 from src.data.loader import get_dataloader
 from src.evaluate import run_evaluation
 
